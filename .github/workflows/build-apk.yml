@@ -1,8 +1,7 @@
 name: Build Android APK
 on:
   push:
-    branches:
-      - master
+    branches: [master]
   workflow_dispatch:
 
 permissions:
@@ -23,13 +22,14 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install SDK platform
+      - name: Install Android SDK packages
+        shell: bash
         run: |
-          yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager "platforms;android-35" "build-tools;35.0.0"
+          set -euo pipefail
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0"
 
       - name: Gradle 8.9
         uses: gradle/actions/setup-gradle@v4
@@ -37,9 +37,10 @@ jobs:
           gradle-version: '8.9'
 
       - name: Build debug APK with diagnostics
+        shell: bash
         run: |
-          gradle --version
-          gradle --no-daemon --stacktrace --info assembleDebug 2>&1 | tee build.log
+          set -euo pipefail
+          gradle --no-daemon --stacktrace assembleDebug 2>&1 | tee build.log
           test -s app/build/outputs/apk/debug/app-debug.apk
 
       - name: Upload debug APK
